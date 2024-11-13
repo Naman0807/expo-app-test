@@ -6,17 +6,21 @@ from flask_cors import CORS
 import tempfile
 import logging
 from contextlib import contextmanager
-from flask_sqlalchemy import SQLAlchemy
+from flask_pymongo import PyMongo
+from bson.objectid import ObjectId
+from datetime import datetime
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
+logging.getLogger("pymongo").setLevel(logging.WARNING)
 # Initialize Flask app and load environment variables
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # Limit upload size to 16 MB
 
-# db = SQLAlchemy(app)
+# Configure MongoDB connection
+app.config["MONGO_URI"] = "mongodb://127.0.0.1:27017/AIClothSuggestion"
+mongo = PyMongo(app)
 
 # Configure CORS to accept requests from any origin during development
 CORS(
@@ -25,14 +29,6 @@ CORS(
 
 # Load environment variables
 load_dotenv()
-
-
-# class Clothing(db.Model):
-#     id = db.Column(db.Integer, primary_key=True)
-#     image_uri = db.Column(db.String(255), nullable=False)
-#     description = db.Column(db.String(255), nullable=False)
-#     tags = db.Column(db.String(255), nullable=True)
-
 
 # Configure Google Generative AI
 api_key = os.getenv("API_KEY")
@@ -127,26 +123,17 @@ def upload():
         return response
 
     logger.info("Received upload request")
-    logger.debug(f"Request headers: {dict(request.headers)}")
-    logger.debug(f"Request files: {dict(request.files)}")
-
     if "image" not in request.files:
-        logger.warning("No image file in request")
         return jsonify({"error": "No image uploaded"}), 400
 
     image = request.files["image"]
     if not image.filename:
-        logger.warning("Empty filename")
         return jsonify({"error": "Invalid image file"}), 400
 
     try:
         with safe_tempfile(suffix=".jpg") as temp_file:
             image.save(temp_file.name)
-            logger.info(f"Saved image to temporary file: {temp_file.name}")
-
             result = analyze_image(temp_file.name)
-            logger.info("Successfully analyzed image")
-
             return jsonify(result)
     except Exception as e:
         logger.error(f"Error processing request: {str(e)}", exc_info=True)
@@ -155,22 +142,65 @@ def upload():
 
 @app.route("/save_item", methods=["POST"])
 def save_item():
-    data = request.json
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "No data provided in the request"}), 400
+
     image_uri = data.get("imageUri")
     description = data.get("description")
-    tags = ", ".join(
-        data.get("tags", [])
-    )  # Convert list of tags to a comma-separated string
+    tags = data.get("tags", [])
 
     if not image_uri or not description:
         return jsonify({"error": "Image URI and description are required"}), 400
 
-    # Save to database
-    # new_item = Clothing(image_uri=image_uri, description=description, tags=tags)
-    # db.session.add(new_item)
-    # db.session.commit()
+    try:
+        clothing_item = {
+            "image_uri": image_uri,
+            "description": description,
+            "tags": tags,
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+        }
 
-    return jsonify({"message": "Item saved successfully", "id": new_item.id})
+        # Insert document into MongoDB and get the inserted ID
+        item_id = mongo.db.clothing.insert_one(clothing_item).inserted_id
+
+        return jsonify({"message": "Item saved successfully", "id": str(item_id)}), 201
+    except Exception as e:
+        logger.error(f"Error saving item to MongoDB: {str(e)}", exc_info=True)
+        return jsonify({"error": "Failed to save item"}), 500
+
+
+@app.route("/clothing", methods=["GET"])
+def get_all_items():
+    """Fetch all clothing items from the database"""
+    try:
+        items = mongo.db.clothing.find()
+        items_list = []
+        for item in items:
+            items_list.append(
+                {
+                    "_id": str(item["_id"]),
+                    "image_uri": item["image_uri"],
+                    "description": item["description"],
+                    "tags": item["tags"],
+                }
+            )
+        return jsonify(items_list), 200
+    except Exception as e:
+        logger.error(f"Error fetching clothing items: {str(e)}", exc_info=True)
+        return jsonify({"error": "Failed to fetch items"}), 500
+
+
+@app.route("/clothing/<item_id>", methods=["DELETE"])
+def delete_item(item_id):
+    """Delete a clothing item from the database"""
+    try:
+        mongo.db.clothing.delete_one({"_id": ObjectId(item_id)})
+        return jsonify({"message": "Item deleted successfully"}), 200
+    except Exception as e:
+        logger.error(f"Error deleting clothing item: {str(e)}", exc_info=True)
+        return jsonify({"error": "Failed to delete item"}), 500
 
 
 if __name__ == "__main__":

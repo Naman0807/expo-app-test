@@ -71,6 +71,10 @@ const UploadScreen = () => {
 				tags: clothingDetails.tags,
 			});
 			Alert.alert("Success", "Item saved successfully!");
+			setSelectedImage(null);
+			setClothingDetails(null);
+			setIsEditing(false);
+			setEditDescription(null);
 		} catch (error) {
 			console.error("Save error:", error);
 			Alert.alert("Error", "Failed to save item. Please try again.");
@@ -103,7 +107,7 @@ const UploadScreen = () => {
 						"Content-Type": "multipart/form-data",
 						Accept: "application/json",
 					},
-					timeout: 30000,
+					timeout: 50000,
 				}
 			);
 
@@ -286,10 +290,12 @@ const styles = StyleSheet.create({
 		marginTop: 20,
 		width: "100%",
 		padding: 15,
+		paddingTop: 25,
 		backgroundColor: "#f9f9f9",
 		borderRadius: 8,
 	},
 	description: {
+		marginTop: 20,
 		fontSize: 16,
 		color: "#333",
 		marginBottom: 15,
@@ -320,9 +326,9 @@ const styles = StyleSheet.create({
 		fontStyle: "italic",
 	},
 	editInput: {
-		borderWidth: 1,
-		borderColor: "#ccc",
-		borderRadius: 4,
+		borderWidth: 2,
+		borderColor: "#999",
+		borderRadius: 20,
 		padding: 10,
 		fontSize: 16,
 		color: "#333",
@@ -332,21 +338,13 @@ const styles = StyleSheet.create({
 	editButton: {
 		paddingVertical: 3.9,
 		backgroundColor: "#28a745",
-		marginTop: 10,
+		marginTop: 1,
+		marginBottom: 5,
+		marginLeft: 180,
 		justifyContent: "center",
 		alignItems: "center",
 		width: "30%",
-		borderRadius: 30,
-	},
-	saveButton: {
-		backgroundColor: "#28a745",
-		paddingVertical: 12,
-		paddingHorizontal: 30,
-		borderRadius: 30,
-		marginVertical: 10,
-		width: "80%",
-		justifyContent: "center",
-		alignItems: "center",
+		borderRadius: 17,
 	},
 });
 
