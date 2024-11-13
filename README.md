@@ -1,8 +1,60 @@
-# Welcome to your Expo app 👋
+# Welcome to AI Cloth Suggestion App 👚👖
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+This project is a combination of a Flask API backend and an Expo-based React Native frontend for a clothing recommendation and wardrobe management system.
 
-## Get started
+## Backend (Flask API)
+
+The backend is built with Flask and uses Google Generative AI for image analysis and MongoDB for data storage.
+
+### Get started with the backend
+
+1. Clone this repository
+
+   ```bash
+   git clone https://github.com/Naman0807/expo-app-test
+   cd testapp
+   ```
+
+2. Set up your virtual environment
+
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+   ```
+
+3. Install the required dependencies
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. Create a `.env` file in the root directory with your Google Generative AI API key:
+
+   ```bash
+   API_KEY=your_google_api_key
+   ```
+
+5. Start the Flask server
+
+   ```bash
+   python app.py
+   ```
+
+The backend will be available at `http://127.0.0.1:5000`.
+
+### Endpoints
+
+- `GET /`: Test endpoint to check if the server is running.
+- `POST /upload`: Upload an image to analyze its contents (clothing type, description, and tags).
+- `POST /save_item`: Save clothing items with an image URI, description, and tags into MongoDB.
+- `GET /clothing`: Get all clothing items from the database.
+- `DELETE /clothing/<item_id>`: Delete a clothing item from the database.
+
+## Frontend (React Native with Expo)
+
+The frontend is built using React Native and Expo, allowing users to upload images, view their wardrobe, and interact with the Flask API.
+
+### Get started with the frontend
 
 1. Install dependencies
 
@@ -13,38 +65,33 @@ This is an [Expo](https://expo.dev) project created with [`create-expo-app`](htt
 2. Start the app
 
    ```bash
-    npx expo start
+   npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+This will open a development environment where you can run the app in an emulator or physical device.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### Project Structure
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
-```
-
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+- `app`: Contains the React Native code for the frontend.
+- `backend`: Contains the Flask API code for image analysis and database interactions.
 
 ## Learn more
 
-To learn more about developing your project with Expo, look at the following resources:
+To learn more about developing your project with Flask and Expo, check out the following resources:
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+- [Flask documentation](https://flask.palletsprojects.com/en/2.3.x/)
+- [Google Generative AI documentation](https://developers.google.com/ai)
+- [MongoDB documentation](https://www.mongodb.com/docs/)
+- [Expo documentation](https://docs.expo.dev/)
 
 ## Join the community
 
-Join our community of developers creating universal apps.
+Join the community of developers building apps with Expo and Flask.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+- [Expo on GitHub](https://github.com/expo/expo)
+- [Flask on GitHub](https://github.com/pallets/flask)
+- [MongoDB Community](https://www.mongodb.com/community)
+
+## License
+
+This project is licensed under the MIT License.
