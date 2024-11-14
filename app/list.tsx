@@ -24,6 +24,7 @@ interface ClothingItem {
 export default function ListPage() {
 	const [clothingItems, setClothingItems] = useState<ClothingItem[]>([]);
 	const [loading, setLoading] = useState<boolean>(true);
+	const [selectedTag, setSelectedTag] = useState<string | null>(null);
 
 	useEffect(() => {
 		const fetchItems = async () => {
@@ -53,6 +54,10 @@ export default function ListPage() {
 		}
 	};
 
+	const filteredItems = selectedTag
+		? clothingItems.filter((item) => item.tags.includes(selectedTag))
+		: clothingItems;
+
 	const renderItemCard = (item: ClothingItem) => (
 		<View key={item._id} style={styles.card}>
 			<Image source={{ uri: item.image_uri }} style={styles.cardImage} />
@@ -77,18 +82,62 @@ export default function ListPage() {
 		</View>
 	);
 
+	const renderTagFilterButtons = () => {
+		const uniqueTags = Array.from(
+			new Set(clothingItems.flatMap((item) => item.tags))
+		);
+
+		return (
+			<View style={styles.filterContainer}>
+				<TouchableOpacity
+					style={[
+						styles.filterButton,
+						!selectedTag && styles.activeFilterButton,
+					]}
+					onPress={() => setSelectedTag(null)}
+				>
+					<Text
+						style={[styles.filterText, !selectedTag && styles.activeFilterText]}
+					>
+						All
+					</Text>
+				</TouchableOpacity>
+				{uniqueTags.map((tag) => (
+					<TouchableOpacity
+						key={tag}
+						style={[
+							styles.filterButton,
+							selectedTag === tag && styles.activeFilterButton,
+						]}
+						onPress={() => setSelectedTag(tag)}
+					>
+						<Text
+							style={[
+								styles.filterText,
+								selectedTag === tag && styles.activeFilterText,
+							]}
+						>
+							{tag}
+						</Text>
+					</TouchableOpacity>
+				))}
+			</View>
+		);
+	};
+
 	return (
 		<SafeAreaView style={styles.container}>
 			{loading ? (
-				<ActivityIndicator size="large" color="#007bff" />
+				<ActivityIndicator size="large" color="#4A90E2" />
 			) : (
 				<ScrollView contentContainerStyle={styles.scrollContent}>
 					<Text style={styles.title}>Your Wardrobe</Text>
-					{clothingItems.length === 0 ? (
-						<Text style={styles.noItems}>No items found in your wardrobe.</Text>
+					{renderTagFilterButtons()}
+					{filteredItems.length === 0 ? (
+						<Text style={styles.noItems}>No items found for this filter.</Text>
 					) : (
 						<View style={styles.cardsContainer}>
-							{clothingItems.map(renderItemCard)}
+							{filteredItems.map(renderItemCard)}
 						</View>
 					)}
 				</ScrollView>
@@ -100,7 +149,7 @@ export default function ListPage() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: "#f4f4f9",
+		backgroundColor: "#F7F9FC",
 		padding: 20,
 	},
 	scrollContent: {
@@ -110,74 +159,105 @@ const styles = StyleSheet.create({
 		paddingHorizontal: 20,
 	},
 	title: {
-		fontSize: 24,
-		fontWeight: "bold",
+		fontSize: 26,
+		fontWeight: "600",
+		color: "#333",
 		textAlign: "center",
-		marginVertical: 20,
+		marginVertical: 25,
+	},
+	filterContainer: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		justifyContent: "center",
+		marginBottom: 15,
+	},
+	filterButton: {
+		backgroundColor: "#E3E9F2",
+		paddingVertical: 10,
+		paddingHorizontal: 15,
+		borderRadius: 30,
+		margin: 5,
+	},
+	activeFilterButton: {
+		backgroundColor: "#4A90E2",
+	},
+	filterText: {
+		color: "#333",
+		fontWeight: "600",
+	},
+	activeFilterText: {
+		color: "#fff",
 	},
 	noItems: {
 		textAlign: "center",
 		color: "#666",
 		fontStyle: "italic",
+		fontSize: 16,
+		marginTop: 20,
 	},
 	cardsContainer: {
 		flex: 1,
+		width: "100%",
 		marginTop: 20,
 	},
 	card: {
 		backgroundColor: "#fff",
-		borderRadius: 10,
-		marginBottom: 20,
+		borderRadius: 15,
+		marginBottom: 15,
 		shadowColor: "#000",
-		shadowOpacity: 0.1,
+		shadowOpacity: 0.15,
 		shadowRadius: 10,
-		elevation: 5,
+		elevation: 6,
 		overflow: "hidden",
 	},
 	cardImage: {
 		width: "100%",
-		height: 400,
+		height: 250,
 		resizeMode: "cover",
 	},
 	cardContent: {
-		padding: 15,
+		padding: 20,
 	},
 	description: {
-		fontSize: 16,
-		color: "#333",
-		marginBottom: 15,
+		fontSize: 18,
+		fontWeight: "500",
+		color: "#444",
+		marginBottom: 10,
 		textAlign: "center",
 	},
 	tagsContainer: {
 		flexDirection: "row",
 		flexWrap: "wrap",
-		marginBottom: 10,
+		justifyContent: "center",
+		marginBottom: 15,
 	},
 	tag: {
-		backgroundColor: "#d3d3d3",
+		backgroundColor: "#DDE5EC",
 		color: "#333",
 		paddingVertical: 5,
-		paddingHorizontal: 10,
+		paddingHorizontal: 15,
 		borderRadius: 20,
 		marginRight: 8,
 		marginBottom: 8,
+		fontSize: 14,
 	},
 	buttonsContainer: {
 		flexDirection: "row",
-		justifyContent: "space-between",
+		justifyContent: "center",
 	},
 	button: {
-		backgroundColor: "#007bff",
-		paddingVertical: 8,
-		paddingHorizontal: 20,
-		borderRadius: 30,
+		backgroundColor: "#4A90E2",
+		paddingVertical: 10,
+		paddingHorizontal: 25,
+		borderRadius: 25,
+		marginTop: 10,
 	},
 	deleteButton: {
-		backgroundColor: "#e74c3c",
+		backgroundColor: "#D9534F",
 	},
 	buttonText: {
 		color: "#fff",
-		fontSize: 14,
-		fontWeight: "bold",
+		fontSize: 16,
+		fontWeight: "500",
 	},
 });
