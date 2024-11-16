@@ -1,97 +1,134 @@
-# Welcome to AI Cloth Suggestion App 👚👖
+# AI Cloth Suggestion App 👚👖
 
-This project is a combination of a Flask API backend and an Expo-based React Native frontend for a clothing recommendation and wardrobe management system.
+A smart wardrobe management system that combines AI-powered clothing analysis with personalized outfit suggestions. Built with React Native (Expo) frontend and Flask backend.
 
-## Backend (Flask API)
+## Features
 
-The backend is built with Flask and uses Google Generative AI for image analysis and MongoDB for data storage.
+- 📸 Upload and analyze clothing items using Google's Generative AI
+- 🏷️ Automatic tagging and description generation for clothing items
+- 👕 Smart wardrobe organization with filterable categories
+- ✨ AI-powered outfit suggestions based on your wardrobe
+- 💾 Save and manage favorite outfits
+- 📱 Cross-platform mobile app (iOS & Android)
 
-### Get started with the backend
+## Tech Stack
 
-1. Clone this repository
+### Frontend
 
-   ```bash
-   git clone https://github.com/Naman0807/expo-app-test
-   cd testapp
-   ```
+- React Native with Expo
+- TypeScript
+- Expo Router for navigation
+- React Native Reanimated for animations
+- Axios for API communication
 
-2. Set up your virtual environment
+### Backend
 
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+- Flask (Python)
+- Google Generative AI for image analysis
+- MongoDB for data storage
+- Flask-CORS for cross-origin support
+- Python-dotenv for environment management
 
-3. Install the required dependencies
+## Prerequisites
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+- Node.js (v14 or higher)
+- Python 3.8+
+- MongoDB installed and running
+- Google Generative AI API key
+- Expo Go app (for mobile testing)
 
-4. Create a `.env` file in the root directory with your Google Generative AI API key:
+## Getting Started
 
-   ```bash
-   API_KEY=your_google_api_key
-   ```
+### Backend Setup
 
-5. Start the Flask server
+1. Clone the repository:
 
-   ```bash
-   python app.py
-   ```
+```bash
+git clone https://github.com/yourusername/ai-cloth-suggestion-app
+cd ai-cloth-suggestion-app
+```
 
-The backend will be available at `http://127.0.0.1:5000`.
+2. Set up Python virtual environment:
 
-### Endpoints
+```bash
+python -m venv venv
+source venv/bin/activate
+```
 
-- `GET /`: Test endpoint to check if the server is running.
-- `POST /upload`: Upload an image to analyze its contents (clothing type, description, and tags).
-- `POST /save_item`: Save clothing items with an image URI, description, and tags into MongoDB.
-- `GET /clothing`: Get all clothing items from the database.
-- `DELETE /clothing/<item_id>`: Delete a clothing item from the database.
+3. Install backend dependencies:
 
-## Frontend (React Native with Expo)
+```bash
+pip install -r requirements.txt
+```
 
-The frontend is built using React Native and Expo, allowing users to upload images, view their wardrobe, and interact with the Flask API.
+4. Create a `.env` file in the root directory:
 
-### Get started with the frontend
+```bash
+API_KEY=your_google_generative_ai_api_key
+```
 
-1. Install dependencies
+5. Start MongoDB service on your machine
 
-   ```bash
-   npm install
-   ```
+6. Run the Flask server:
 
-2. Start the app
+```bash
+python tempbackend.py
+```
 
-   ```bash
-   npx expo start
-   ```
+The backend will be available at `http://127.0.0.1:5000`
 
-This will open a development environment where you can run the app in an emulator or physical device.
+### Frontend Setup
 
-### Project Structure
+1. Install frontend dependencies:
 
-- `app`: Contains the React Native code for the frontend.
-- `backend`: Contains the Flask API code for image analysis and database interactions.
+```bash
+npm install
+```
 
-## Learn more
+2. Update the API URL:
+   Navigate to these files and update the API_URL constant with your Flask server address.
 
-To learn more about developing your project with Flask and Expo, check out the following resources:
+3. Start the Expo development server:
 
-- [Flask documentation](https://flask.palletsprojects.com/en/2.3.x/)
-- [Google Generative AI documentation](https://developers.google.com/ai)
-- [MongoDB documentation](https://www.mongodb.com/docs/)
-- [Expo documentation](https://docs.expo.dev/)
+```bash
+npx expo start
+```
 
-## Join the community
+## API Endpoints
 
-Join the community of developers building apps with Expo and Flask.
+- `GET /`: Test endpoint
+- `POST /upload`: Upload and analyze clothing images
+- `GET /clothing`: Retrieve all clothing items
+- `DELETE /clothing/<item_id>`: Delete a clothing item
+- `GET /suggest`: Get AI-powered outfit suggestions
+- `POST /save-outfit`: Save an outfit combination
+- `GET /saved-outfits`: Retrieve saved outfits
+- `DELETE /saved-outfits/<outfit_id>`: Delete a saved outfit
 
-- [Expo on GitHub](https://github.com/expo/expo)
-- [Flask on GitHub](https://github.com/pallets/flask)
-- [MongoDB Community](https://www.mongodb.com/community)
+## Project Structure
+
+- `/app`: React Native frontend code
+  - `/(tabs)`: Main tab navigation screens
+  - `/(savedcloth)`: Saved outfits screens
+- `/backend`: Flask backend code
+- `/components`: Reusable React components
+- `/hooks`: Custom React hooks
+- `/constants`: App constants and theme configuration
+
+## Contributing
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
 ## License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Acknowledgments
+
+- Google Generative AI for image analysis
+- Expo team for the amazing mobile development framework
+- Flask team for the lightweight Python backend framework
