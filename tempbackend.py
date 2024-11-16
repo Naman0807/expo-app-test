@@ -9,6 +9,8 @@ from contextlib import contextmanager
 from flask_pymongo import PyMongo
 from bson.objectid import ObjectId
 from datetime import datetime
+import random
+
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -201,6 +203,139 @@ def delete_item(item_id):
     except Exception as e:
         logger.error(f"Error deleting clothing item: {str(e)}", exc_info=True)
         return jsonify({"error": "Failed to delete item"}), 500
+
+
+@app.route("/suggest", methods=["GET"])
+def suggest():
+    """Generate an outfit suggestion from available clothing items"""
+    try:
+        # Get all clothing items
+        all_items = list(mongo.db.clothing.find())
+
+        if not all_items:
+            return jsonify({"error": "No clothing items available"}), 400
+
+        # Categorize items
+        tops = [
+            item
+            for item in all_items
+            if any(
+                tag.lower() in ["top piece", "shirt", "t-shirt", "blouse", "sweater"]
+                for tag in item["tags"]
+            )
+        ]
+        bottoms = [
+            item
+            for item in all_items
+            if any(
+                tag.lower() in ["bottom piece", "pants", "jeans", "skirt", "shorts"]
+                for tag in item["tags"]
+            )
+        ]
+        full_pieces = [
+            item
+            for item in all_items
+            if any(
+                tag.lower() in ["full piece", "dress", "jumpsuit"]
+                for tag in item["tags"]
+            )
+        ]
+
+        outfit = []
+
+        # Either select a full piece OR a top and bottom combination
+        if full_pieces and random.random() < 0.3:  # 30% chance to select a full piece
+            outfit.append(random.choice(full_pieces))
+        else:
+            # Try to select a top and bottom
+            if tops:
+                outfit.append(random.choice(tops))
+            if bottoms:
+                outfit.append(random.choice(bottoms))
+
+        if not outfit:
+            return jsonify({"error": "Not enough items to create an outfit"}), 400
+
+        # Format the response
+        formatted_outfit = [
+            {
+                "_id": str(item["_id"]),
+                "image_uri": item["image_uri"],
+                "description": item["description"],
+                "tags": item["tags"],
+            }
+            for item in outfit
+        ]
+
+        return jsonify(formatted_outfit), 200
+
+    except Exception as e:
+        logger.error(f"Error generating outfit suggestion: {str(e)}", exc_info=True)
+        return jsonify({"error": "Failed to generate outfit suggestion"}), 500
+
+
+@app.route("/save-outfit", methods=["POST"])
+def save_outfit():
+    """Save a generated outfit"""
+    try:
+        data = request.get_json()
+        if not data or "items" not in data:
+            return jsonify({"error": "No outfit data provided"}), 400
+
+        outfit_data = {
+            "items": data["items"],
+            "date": datetime.fromisoformat(data["date"]),
+            "created_at": datetime.utcnow(),
+        }
+
+        result = mongo.db.saved_outfits.insert_one(outfit_data)
+        return (
+            jsonify(
+                {"message": "Outfit saved successfully", "id": str(result.inserted_id)}
+            ),
+            201,
+        )
+
+    except Exception as e:
+        logger.error(f"Error saving outfit: {str(e)}", exc_info=True)
+        return jsonify({"error": "Failed to save outfit"}), 500
+
+
+@app.route("/saved-outfits", methods=["GET"])
+def get_saved_outfits():
+    """Get all saved outfits"""
+    try:
+        outfits = mongo.db.saved_outfits.find().sort("created_at", -1)
+        formatted_outfits = []
+
+        for outfit in outfits:
+            formatted_outfits.append(
+                {
+                    "_id": str(outfit["_id"]),
+                    "items": outfit["items"],
+                    "date": outfit["date"].isoformat(),
+                }
+            )
+
+        return jsonify(formatted_outfits), 200
+
+    except Exception as e:
+        logger.error(f"Error fetching saved outfits: {str(e)}", exc_info=True)
+        return jsonify({"error": "Failed to fetch saved outfits"}), 500
+
+
+@app.route("/saved-outfits/<outfit_id>", methods=["DELETE"])
+def delete_saved_outfit(outfit_id):
+    """Delete a saved outfit"""
+    try:
+        result = mongo.db.saved_outfits.delete_one({"_id": ObjectId(outfit_id)})
+        if result.deleted_count:
+            return jsonify({"message": "Outfit deleted successfully"}), 200
+        return jsonify({"error": "Outfit not found"}), 404
+
+    except Exception as e:
+        logger.error(f"Error deleting saved outfit: {str(e)}", exc_info=True)
+        return jsonify({"error": "Failed to delete outfit"}), 500
 
 
 if __name__ == "__main__":
