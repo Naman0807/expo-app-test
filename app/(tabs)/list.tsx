@@ -12,11 +12,11 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import axios from "axios";
 
-const API_URL = "http://192.168.123.218:5000";
+const API_URL = "http://192.168.255.218:5000";
 
 interface ClothingItem {
 	_id: string;
-	image_uri: string;
+	image_uri: string; // This will now contain the base64 data URL
 	description: string;
 	tags: string[];
 }
@@ -55,7 +55,9 @@ export default function ListPage() {
 	};
 
 	const filteredItems = selectedTag
-		? clothingItems.filter((item) => item.tags.includes(selectedTag))
+		? clothingItems.filter((item) =>
+				item.tags.some((tag) => tag.toLowerCase() === selectedTag.toLowerCase())
+			)
 		: clothingItems;
 
 	const renderItemCard = (item: ClothingItem) => (

@@ -11,7 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import axios from "axios";
 
-const API_URL = "http://192.168.123.218:5000";
+const API_URL = "http://192.168.255.218:5000";
 
 interface ClothingItem {
 	_id: string;

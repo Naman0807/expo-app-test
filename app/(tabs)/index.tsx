@@ -7,14 +7,15 @@ import {
 	StyleSheet,
 	TouchableOpacity,
 	Alert,
-	ScrollView, // Import ScrollView
+	ScrollView,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
 import axios from "axios";
 import { SafeAreaView } from "react-native-safe-area-context";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 
-const API_URL = "http://192.168.123.218:5000";
+const API_URL = "http://192.168.255.218:5000";
 
 interface ClothingDetails {
 	description: string;
@@ -65,11 +66,17 @@ const UploadScreen = () => {
 		}
 
 		try {
+			// Read the image file and convert to base64
+			const base64Data = await FileSystem.readAsStringAsync(selectedImage, {
+				encoding: FileSystem.EncodingType.Base64,
+			});
+
 			const response = await axios.post(`${API_URL}/save_item`, {
-				imageUri: selectedImage,
+				imageBase64: base64Data,
 				description: clothingDetails.description,
 				tags: clothingDetails.tags,
 			});
+
 			Alert.alert("Success", "Item saved successfully!");
 			setSelectedImage(null);
 			setClothingDetails(null);

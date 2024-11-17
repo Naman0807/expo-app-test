@@ -10,6 +10,9 @@ from flask_pymongo import PyMongo
 from bson.objectid import ObjectId
 from datetime import datetime
 import random
+import base64
+from io import BytesIO
+from PIL import Image
 
 
 # Set up logging
@@ -148,23 +151,23 @@ def save_item():
     if not data:
         return jsonify({"error": "No data provided in the request"}), 400
 
-    image_uri = data.get("imageUri")
+    base64_image = data.get("imageBase64")
     description = data.get("description")
     tags = data.get("tags", [])
 
-    if not image_uri or not description:
-        return jsonify({"error": "Image URI and description are required"}), 400
+    if not base64_image or not description:
+        return jsonify({"error": "Image data and description are required"}), 400
 
     try:
         clothing_item = {
-            "image_uri": image_uri,
+            "image_data": base64_image,
             "description": description,
             "tags": tags,
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow(),
         }
 
-        # Insert document into MongoDB and get the inserted ID
+        # Insert document into MongoDB
         item_id = mongo.db.clothing.insert_one(clothing_item).inserted_id
 
         return jsonify({"message": "Item saved successfully", "id": str(item_id)}), 201
@@ -183,7 +186,7 @@ def get_all_items():
             items_list.append(
                 {
                     "_id": str(item["_id"]),
-                    "image_uri": item["image_uri"],
+                    "image_uri": f"data:image/jpeg;base64,{item['image_data']}",
                     "description": item["description"],
                     "tags": item["tags"],
                 }
@@ -240,11 +243,19 @@ def suggest():
                 for tag in item["tags"]
             )
         ]
+        footwear = [
+            item
+            for item in all_items
+            if any(
+                tag.lower() in ["slides", "shoes", "shoe", "crocs"]
+                for tag in item["tags"]
+            )
+        ]
 
         outfit = []
 
         # Either select a full piece OR a top and bottom combination
-        if full_pieces and random.random() < 0.3:  # 30% chance to select a full piece
+        if full_pieces and random.random() < 0.2:  # 30% chance to select a full piece
             outfit.append(random.choice(full_pieces))
         else:
             # Try to select a top and bottom
@@ -252,6 +263,8 @@ def suggest():
                 outfit.append(random.choice(tops))
             if bottoms:
                 outfit.append(random.choice(bottoms))
+            if footwear:
+                outfit.append(random.choice(footwear))
 
         if not outfit:
             return jsonify({"error": "Not enough items to create an outfit"}), 400
