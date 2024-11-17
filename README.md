@@ -44,8 +44,8 @@ A smart wardrobe management system that combines AI-powered clothing analysis wi
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/ai-cloth-suggestion-app
-cd ai-cloth-suggestion-app
+git clone https://github.com/Naman0807/expo-app-test
+cd expo-app-test
 ```
 
 2. Set up Python virtual environment:
@@ -122,13 +122,3 @@ npx expo start
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Acknowledgments
-
-- Google Generative AI for image analysis
-- Expo team for the amazing mobile development framework
-- Flask team for the lightweight Python backend framework
