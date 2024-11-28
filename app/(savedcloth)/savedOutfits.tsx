@@ -37,7 +37,7 @@ export default function SavedOutfits() {
 
 	const fetchSavedOutfits = async () => {
 		try {
-			const response = await axios.get(`${API_URL}/saved-outfits`);
+			const response = await axios.get(`${API_URL}/saved_outfits`);
 			setSavedOutfits(response.data);
 		} catch (error) {
 			console.error("Error fetching saved outfits:", error);
@@ -49,7 +49,7 @@ export default function SavedOutfits() {
 
 	const deleteOutfit = async (outfitId: string) => {
 		try {
-			await axios.delete(`${API_URL}/saved-outfits/${outfitId}`);
+			await axios.delete(`${API_URL}/saved_outfits/${outfitId}`);
 			setSavedOutfits((prevOutfits) =>
 				prevOutfits.filter((outfit) => outfit._id !== outfitId)
 			);

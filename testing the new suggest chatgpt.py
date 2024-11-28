@@ -13,7 +13,10 @@ import random
 import base64
 from io import BytesIO
 from PIL import Image
-
+import openai
+import json
+import re
+from openai import OpenAI
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG)
@@ -21,7 +24,7 @@ logger = logging.getLogger(__name__)
 logging.getLogger("pymongo").setLevel(logging.WARNING)
 # Initialize Flask app and load environment variables
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # Limit upload size to 16 MB
+app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024
 
 # Configure MongoDB connection
 app.config["MONGO_URI"] = "mongodb://127.0.0.1:27017/AIClothSuggestion"
@@ -41,6 +44,10 @@ if not api_key:
     raise ValueError("API_KEY not found in environment variables")
 
 genai.configure(api_key=api_key)
+
+client = OpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY"),
+)
 
 
 @contextmanager
@@ -211,126 +218,84 @@ def delete_item(item_id):
 
 @app.route("/suggest", methods=["POST"])
 def suggest():
-    """Generate an outfit suggestion based on user-selected items."""
+    """Suggest clothing items based on compatibility scoring."""
     try:
         data = request.get_json()
-        selected_items = data.get("selected_items", {})
+        if not data or "selectedItems" not in data:
+            return jsonify({"error": "No selected items provided"}), 400
 
-        # Get all clothing items from the database
-        all_items = list(mongo.db.clothing.find())
+        selected_item_ids = data["selectedItems"]
+        if not selected_item_ids:
+            return jsonify({"error": "Selected items list is empty"}), 400
+
+        # Fetch selected items from the database
+        selected_items = list(
+            mongo.db.clothing.find(
+                {"_id": {"$in": [ObjectId(id) for id in selected_item_ids]}}
+            )
+        )
+        if not selected_items:
+            return jsonify({"error": "Selected items not found in database"}), 404
+
+        # Fetch all other items in the database
+        all_items = list(
+            mongo.db.clothing.find(
+                {"_id": {"$nin": [ObjectId(id) for id in selected_item_ids]}}
+            )
+        )
 
         if not all_items:
-            return jsonify({"error": "No clothing items available"}), 400
+            return jsonify({"error": "No other items found in database"}), 404
 
-        # Filter items by categories
-        tops = [
-            item
-            for item in all_items
-            if any(
-                tag in ["topwear", "shirt", "t-shirt", "blouse", "sweater"]
-                for tag in item["tags"]
-            )
-        ]
-        bottoms = [
-            item
-            for item in all_items
-            if any(
-                tag in ["bottomwear", "pants", "jeans", "skirt", "shorts"]
-                for tag in item["tags"]
-            )
-        ]
-        footwear = [
-            item
-            for item in all_items
-            if any(
-                tag in ["footwear", "shoes", "boots", "sandals", "sneakers"]
-                for tag in item["tags"]
-            )
-        ]
+        def calculate_score(item1, item2):
+            """
+            A custom scoring function to determine the compatibility between two items.
+            You can adjust this based on your requirements.
+            """
+            score = 0
 
-        outfit = []
-        selected_style_tags = set()
+            # Example scoring criteria (adjust as needed):
+            # - Matching tags
+            score += len(set(item1.get("tags", [])) & set(item2.get("tags", [])))
 
-        # Process selected items and extract style tags
-        for category, item in selected_items.items():
-            if item:
-                outfit.append(item)
-                selected_style_tags.update(
-                    tag
-                    for tag in item["tags"]
-                    if tag in ["casual", "formal", "party", "sport"]
-                )
+            # - Similar description length (arbitrary scoring logic)
+            score += 1 - abs(
+                len(item1["description"]) - len(item2["description"])
+            ) / max(len(item1["description"]), len(item2["description"]), 1)
 
-        # Helper function to score items based on tag matching
-        def score_item(item, style_tags):
-            item_tags = set(tag for tag in item["tags"])
-            # Score based on matching style tags
-            style_match = len(item_tags.intersection(style_tags))
-            return style_match if style_match > 0 else 0
+            # Additional criteria can be added here.
+            return score
 
-        # Function to select best matching item from a category
-        def select_best_item(items, existing_outfit, style_tags):
-            if not items:
-                return None
+        # Calculate scores for all items
+        suggestions = []
+        for candidate_item in all_items:
+            total_score = 0
+            for selected_item in selected_items:
+                total_score += calculate_score(selected_item, candidate_item)
+            # Average the score across selected items
+            average_score = total_score / len(selected_items)
+            suggestions.append({"item": candidate_item, "score": average_score})
 
-            # Filter out items already in outfit
-            available_items = [
-                item
-                for item in items
-                if not any(
-                    str(item["_id"]) == str(existing["_id"])
-                    for existing in existing_outfit
-                )
-            ]
+        # Sort suggestions by score in descending order
+        suggestions = sorted(suggestions, key=lambda x: x["score"], reverse=True)
 
-            if not available_items:
-                return None
-
-            # If we have style tags, use them for scoring
-            if style_tags:
-                return max(available_items, key=lambda x: score_item(x, style_tags))
-            else:
-                # If no style tags, select randomly
-                return random.choice(available_items)
-
-        # Complete the outfit with missing categories
-        if not any("topwear" in item.get("tags", []) for item in outfit):
-            top = select_best_item(tops, outfit, selected_style_tags)
-            if top:
-                outfit.append(top)
-
-        if not any("bottomwear" in item.get("tags", []) for item in outfit):
-            bottom = select_best_item(bottoms, outfit, selected_style_tags)
-            if bottom:
-                outfit.append(bottom)
-
-        if not any("footwear" in item.get("tags", []) for item in outfit):
-            shoe = select_best_item(footwear, outfit, selected_style_tags)
-            if shoe:
-                outfit.append(shoe)
-
-        if len(outfit) < 3:
-            return (
-                jsonify({"error": "Not enough items to create a complete outfit"}),
-                400,
-            )
-
-        # Format the response
-        formatted_outfit = [
+        # Format and return the top suggestions
+        formatted_suggestions = [
             {
-                "_id": str(item["_id"]),
-                "image_uri": f"data:image/jpeg;base64,{item['image_data']}",
-                "description": item["description"],
-                "tags": item["tags"],
+                "_id": str(suggestion["item"]["_id"]),
+                "image_uri": f"data:image/jpeg;base64,{suggestion['item']['image_data']}",
+                "description": suggestion["item"]["description"],
+                "tags": suggestion["item"]["tags"],
+                "score": suggestion["score"],
             }
-            for item in outfit
+            for suggestion in suggestions[:10]  # Limit to top 10 suggestions
         ]
 
-        return jsonify(formatted_outfit), 200
+        return jsonify(formatted_suggestions), 200
 
     except Exception as e:
-        logger.error(f"Error generating outfit suggestion: {str(e)}", exc_info=True)
-        return jsonify({"error": "Failed to generate outfit suggestion"}), 500
+        logger.error(f"Error in suggestion logic: {str(e)}", exc_info=True)
+        return jsonify({"error": "Failed to generate suggestions"}), 500
 
 
 @app.route("/save-outfit", methods=["POST"])

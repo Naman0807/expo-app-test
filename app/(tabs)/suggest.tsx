@@ -7,6 +7,7 @@ import {
 	Image,
 	TouchableOpacity,
 	Alert,
+	ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import axios from "axios";
@@ -21,86 +22,183 @@ interface ClothingItem {
 }
 
 export default function Suggest() {
+	const [wardrobe, setWardrobe] = useState<ClothingItem[]>([]);
 	const [outfitSuggestion, setOutfitSuggestion] = useState<ClothingItem[]>([]);
+	const [selectedItems, setSelectedItems] = useState<{
+		topwear: ClothingItem | null;
+		bottomwear: ClothingItem | null;
+		footwear: ClothingItem | null;
+	}>({
+		topwear: null,
+		bottomwear: null,
+		footwear: null,
+	});
 	const [loading, setLoading] = useState(false);
-	const [saving, setSaving] = useState(false);
+
+	useEffect(() => {
+		fetchWardrobe();
+	}, []);
+
+	const fetchWardrobe = async () => {
+		try {
+			const response = await axios.get(`${API_URL}/clothing`);
+			setWardrobe(response.data);
+		} catch (error) {
+			console.error("Error fetching wardrobe:", error);
+			Alert.alert("Error", "Failed to fetch wardrobe items");
+		}
+	};
 
 	const generateOutfit = async () => {
 		setLoading(true);
 		try {
-			// You'll need to implement this endpoint in your backend
-			const response = await axios.get(`${API_URL}/suggest`);
+			const response = await axios.post(`${API_URL}/suggest`, {
+				selected_items: selectedItems,
+			});
 			setOutfitSuggestion(response.data);
 		} catch (error) {
 			console.error("Error generating outfit:", error);
+			Alert.alert(
+				"Error",
+				"Failed to generate outfit suggestion. Please try again."
+			);
 		} finally {
 			setLoading(false);
 		}
 	};
-	const saveOutfit = async () => {
-		if (outfitSuggestion.length === 0) {
-			Alert.alert("Error", "Please generate an outfit first");
-			return;
-		}
 
-		setSaving(true);
-		try {
-			const response = await axios.post(`${API_URL}/save-outfit`, {
-				items: outfitSuggestion,
-				date: new Date().toISOString(),
-			});
-			Alert.alert("Success", "Outfit saved successfully!");
-		} catch (error) {
-			console.error("Error saving outfit:", error);
-			Alert.alert("Error", "Failed to save outfit");
-		} finally {
-			setSaving(false);
+	const getItemCategory = (item: ClothingItem): string => {
+		const tags = item.tags.map((tag) => tag.toLowerCase());
+		if (
+			tags.some((tag) =>
+				["topwear", "shirt", "t-shirt", "blouse", "sweater"].includes(tag)
+			)
+		) {
+			return "topwear";
+		}
+		if (
+			tags.some((tag) =>
+				["bottomwear", "pants", "jeans", "skirt", "shorts"].includes(tag)
+			)
+		) {
+			return "bottomwear";
+		}
+		if (
+			tags.some((tag) =>
+				["footwear", "shoes", "boots", "sandals", "sneakers"].includes(tag)
+			)
+		) {
+			return "footwear";
+		}
+		return "";
+	};
+
+	const handleSelection = (item: ClothingItem) => {
+		const category = getItemCategory(item);
+		if (category) {
+			setSelectedItems((prev) => ({
+				...prev,
+				[category]:
+					prev[category as keyof typeof prev]?._id === item._id ? null : item,
+			}));
+			setOutfitSuggestion([]); // Clear previous suggestions
 		}
 	};
 
+	const renderWardrobeSection = (title: string, items: ClothingItem[]) => (
+		<View style={styles.section}>
+			<Text style={styles.sectionTitle}>{title}</Text>
+			<ScrollView horizontal showsHorizontalScrollIndicator={false}>
+				<View style={styles.itemContainer}>
+					{items.map((item) => {
+						const category = getItemCategory(item);
+						const isSelected =
+							selectedItems[category as keyof typeof selectedItems]?._id ===
+							item._id;
+
+						return (
+							<TouchableOpacity
+								key={item._id}
+								onPress={() => handleSelection(item)}
+								style={[styles.item, isSelected && styles.selectedItem]}
+							>
+								<Image
+									source={{ uri: item.image_uri }}
+									style={styles.itemImage}
+								/>
+							</TouchableOpacity>
+						);
+					})}
+				</View>
+			</ScrollView>
+		</View>
+	);
+
+	const renderSuggestion = () => (
+		<View style={styles.suggestionContainer}>
+			<Text style={styles.sectionTitle}>Suggested Outfit</Text>
+			<View style={styles.outfitContainer}>
+				{outfitSuggestion.map((item) => (
+					<View key={item._id} style={styles.suggestionItem}>
+						<Image
+							source={{ uri: item.image_uri }}
+							style={styles.suggestionImage}
+						/>
+					</View>
+				))}
+			</View>
+		</View>
+	);
+
 	return (
 		<SafeAreaView style={styles.container}>
-			<ScrollView contentContainerStyle={styles.scrollContent}>
-				<Text style={styles.title}>Outfit Suggestions</Text>
+			<ScrollView>
+				{renderWardrobeSection(
+					"Tops",
+					wardrobe.filter((item) =>
+						item.tags.some((tag) =>
+							["topwear", "shirt", "t-shirt", "blouse", "sweater"].includes(
+								tag.toLowerCase()
+							)
+						)
+					)
+				)}
+				{renderWardrobeSection(
+					"Bottoms",
+					wardrobe.filter((item) =>
+						item.tags.some((tag) =>
+							["bottomwear", "pants", "jeans", "skirt", "shorts"].includes(
+								tag.toLowerCase()
+							)
+						)
+					)
+				)}
+				{renderWardrobeSection(
+					"Footwear",
+					wardrobe.filter((item) =>
+						item.tags.some((tag) =>
+							["footwear", "shoes", "boots", "sandals", "sneakers"].includes(
+								tag.toLowerCase()
+							)
+						)
+					)
+				)}
 
 				<TouchableOpacity
 					style={styles.generateButton}
 					onPress={generateOutfit}
 					disabled={loading}
 				>
-					<Text style={styles.buttonText}>
-						{loading ? "Generating..." : "Generate New Outfit"}
-					</Text>
+					{loading ? (
+						<ActivityIndicator color="#fff" />
+					) : (
+						<Text style={styles.generateButtonText}>
+							Generate Outfit Suggestion
+						</Text>
+					)}
 				</TouchableOpacity>
 
-				{outfitSuggestion.length > 0 ? (
-					<View style={styles.outfitContainer}>
-						{outfitSuggestion.map((item, index) => (
-							<View key={item._id} style={styles.itemCard}>
-								<Image
-									source={{ uri: item.image_uri }}
-									style={styles.itemImage}
-								/>
-								<Text style={styles.itemDescription}>{item.description}</Text>
-							</View>
-						))}
-
-						<TouchableOpacity
-							style={[styles.saveButton, saving && styles.disabledButton]}
-							onPress={saveOutfit}
-							disabled={saving}
-						>
-							<Text style={styles.buttonText}>
-								{saving ? "Saving..." : "Save Outfit"}
-							</Text>
-						</TouchableOpacity>
-					</View>
-				) : (
-					<Text style={styles.emptyText}>
-						Tap the button above to get outfit suggestions based on your
-						wardrobe!
-					</Text>
-				)}
+				{outfitSuggestion.length > 0 && renderSuggestion()}
 			</ScrollView>
 		</SafeAreaView>
 	);
@@ -109,69 +207,72 @@ export default function Suggest() {
 const styles = StyleSheet.create({
 	container: {
 		flex: 1,
-		backgroundColor: "#f8f9fa",
+		backgroundColor: "#fff",
 	},
-	scrollContent: {
-		padding: 20,
+	section: {
+		marginVertical: 10,
+		paddingHorizontal: 15,
 	},
-	title: {
-		fontSize: 24,
+	sectionTitle: {
+		fontSize: 18,
 		fontWeight: "bold",
-		color: "#212529",
-		textAlign: "center",
-		marginVertical: 20,
+		marginBottom: 10,
 	},
-	generateButton: {
-		backgroundColor: "#4361ee",
-		padding: 16,
-		borderRadius: 12,
-		marginVertical: 20,
+	itemContainer: {
+		flexDirection: "row",
+		gap: 10,
 	},
-	buttonText: {
-		color: "#ffffff",
-		textAlign: "center",
-		fontSize: 16,
-		fontWeight: "600",
+	item: {
+		width: 120,
+		marginRight: 10,
+		borderRadius: 8,
+		backgroundColor: "#f0f0f0",
+		padding: 5,
 	},
-	outfitContainer: {
-		gap: 16,
-	},
-	itemCard: {
-		backgroundColor: "#ffffff",
-		borderRadius: 12,
-		padding: 12,
-		shadowColor: "#000",
-		shadowOffset: { width: 0, height: 2 },
-		shadowOpacity: 0.1,
-		shadowRadius: 4,
-		elevation: 3,
+	selectedItem: {
+		borderWidth: 2,
+		borderColor: "#4361ee",
 	},
 	itemImage: {
 		width: "100%",
-		height: 200,
+		height: 120,
 		borderRadius: 8,
-		marginBottom: 12,
+		marginBottom: 5,
 	},
 	itemDescription: {
-		fontSize: 16,
-		color: "#495057",
+		fontSize: 12,
 		textAlign: "center",
 	},
-	emptyText: {
-		textAlign: "center",
-		color: "#6c757d",
+	generateButton: {
+		backgroundColor: "#4361ee",
+		padding: 15,
+		borderRadius: 8,
+		margin: 15,
+		alignItems: "center",
+	},
+	generateButtonText: {
+		color: "#fff",
 		fontSize: 16,
-		marginTop: 40,
-		fontStyle: "italic",
+		fontWeight: "bold",
 	},
-	saveButton: {
-		backgroundColor: "#28a745",
-		padding: 16,
-		borderRadius: 12,
-		marginTop: 20,
+	suggestionContainer: {
+		margin: 15,
 	},
-	disabledButton: {
-		backgroundColor: "#6c757d",
-		opacity: 0.7,
+	outfitContainer: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		justifyContent: "space-around",
+		gap: 10,
+	},
+	suggestionItem: {
+		width: "45%",
+		aspectRatio: 1,
+		marginBottom: 10,
+	},
+	suggestionImage: {
+		width: "100%",
+		height: "80%",
+		borderRadius: 8,
+		marginBottom: 5,
 	},
 });

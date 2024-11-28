@@ -101,9 +101,9 @@ npx expo start
 - `GET /clothing`: Retrieve all clothing items
 - `DELETE /clothing/<item_id>`: Delete a clothing item
 - `GET /suggest`: Get AI-powered outfit suggestions
-- `POST /save-outfit`: Save an outfit combination
-- `GET /saved-outfits`: Retrieve saved outfits
-- `DELETE /saved-outfits/<outfit_id>`: Delete a saved outfit
+- `POST /save_outfit`: Save an outfit combination
+- `GET /saved_outfits`: Retrieve saved outfits
+- `DELETE /saved_outfits/<outfit_id>`: Delete a saved outfit
 
 ## Project Structure
 

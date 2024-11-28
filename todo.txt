@@ -1,1 +1,1 @@
-> make the function for getting the outfit using the openAI api via selected cloth and rest of the by openAI. Search the DB for the tags which are most scored will be displayed.
+> make the suggest function for getting the outfit using the openAI api via selected cloth and rest of the by openAI. Search the DB for the tags which are most scored will be displayed.
