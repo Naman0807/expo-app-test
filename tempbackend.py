@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 logging.getLogger("pymongo").setLevel(logging.WARNING)
 # Initialize Flask app and load environment variables
 app = Flask(__name__)
-app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # Limit upload size to 16 MB
+app.config["MAX_CONTENT_LENGTH"] = 20 * 1024 * 1024  # Limit upload size to 16 MB
 
 # Configure MongoDB connection
 app.config["MONGO_URI"] = "mongodb://127.0.0.1:27017/AIClothSuggestion"
@@ -207,130 +207,6 @@ def delete_item(item_id):
     except Exception as e:
         logger.error(f"Error deleting clothing item: {str(e)}", exc_info=True)
         return jsonify({"error": "Failed to delete item"}), 500
-
-
-@app.route("/suggest", methods=["POST"])
-def suggest():
-    """Generate an outfit suggestion based on user-selected items."""
-    try:
-        data = request.get_json()
-        selected_items = data.get("selected_items", {})
-
-        # Get all clothing items from the database
-        all_items = list(mongo.db.clothing.find())
-
-        if not all_items:
-            return jsonify({"error": "No clothing items available"}), 400
-
-        # Filter items by categories
-        tops = [
-            item
-            for item in all_items
-            if any(
-                tag in ["topwear", "shirt", "t-shirt", "blouse", "sweater"]
-                for tag in item["tags"]
-            )
-        ]
-        bottoms = [
-            item
-            for item in all_items
-            if any(
-                tag in ["bottomwear", "pants", "jeans", "skirt", "shorts"]
-                for tag in item["tags"]
-            )
-        ]
-        footwear = [
-            item
-            for item in all_items
-            if any(
-                tag in ["footwear", "shoes", "boots", "sandals", "sneakers"]
-                for tag in item["tags"]
-            )
-        ]
-
-        outfit = []
-        selected_style_tags = set()
-
-        # Process selected items and extract style tags
-        for category, item in selected_items.items():
-            if item:
-                outfit.append(item)
-                selected_style_tags.update(
-                    tag
-                    for tag in item["tags"]
-                    if tag in ["casual", "formal", "party", "sport"]
-                )
-
-        # Helper function to score items based on tag matching
-        def score_item(item, style_tags):
-            item_tags = set(tag for tag in item["tags"])
-            # Score based on matching style tags
-            style_match = len(item_tags.intersection(style_tags))
-            return style_match if style_match > 0 else 0
-
-        # Function to select best matching item from a category
-        def select_best_item(items, existing_outfit, style_tags):
-            if not items:
-                return None
-
-            # Filter out items already in outfit
-            available_items = [
-                item
-                for item in items
-                if not any(
-                    str(item["_id"]) == str(existing["_id"])
-                    for existing in existing_outfit
-                )
-            ]
-
-            if not available_items:
-                return None
-
-            # If we have style tags, use them for scoring
-            if style_tags:
-                return max(available_items, key=lambda x: score_item(x, style_tags))
-            else:
-                # If no style tags, select randomly
-                return random.choice(available_items)
-
-        # Complete the outfit with missing categories
-        if not any("topwear" in item.get("tags", []) for item in outfit):
-            top = select_best_item(tops, outfit, selected_style_tags)
-            if top:
-                outfit.append(top)
-
-        if not any("bottomwear" in item.get("tags", []) for item in outfit):
-            bottom = select_best_item(bottoms, outfit, selected_style_tags)
-            if bottom:
-                outfit.append(bottom)
-
-        if not any("footwear" in item.get("tags", []) for item in outfit):
-            shoe = select_best_item(footwear, outfit, selected_style_tags)
-            if shoe:
-                outfit.append(shoe)
-
-        if len(outfit) < 3:
-            return (
-                jsonify({"error": "Not enough items to create a complete outfit"}),
-                400,
-            )
-
-        # Format the response
-        formatted_outfit = [
-            {
-                "_id": str(item["_id"]),
-                "image_uri": f"data:image/jpeg;base64,{item['image_data']}",
-                "description": item["description"],
-                "tags": item["tags"],
-            }
-            for item in outfit
-        ]
-
-        return jsonify(formatted_outfit), 200
-
-    except Exception as e:
-        logger.error(f"Error generating outfit suggestion: {str(e)}", exc_info=True)
-        return jsonify({"error": "Failed to generate outfit suggestion"}), 500
 
 
 @app.route("/save-outfit", methods=["POST"])
